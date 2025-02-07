@@ -15,10 +15,10 @@ curl -LO https://bootstrap.pypa.io/get-pip.py
 python\python.exe get-pip.py
 del %CD%\python\none.save
 ren %CD%\python\python313._pth none.save
-python\python.exe -m pip install pip setuptools --upgrade
+python\python.exe -m pip install pip==19.0.1
 REM Install packages...
 echo Installing required packages...
-pip install opencv-python mss pyaudio pyautogui pyperclip google-genai pillow
+pip install setuptools opencv-python mss pyaudio pyautogui pyperclip google-genai pillow
 
 REM Open two command windows to run lms.py and run-uv.py
 echo Starting program...
