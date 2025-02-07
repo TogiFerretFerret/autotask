@@ -31,7 +31,7 @@ FORMAT = pyaudio.paInt16
 CHANNELS = 1
 SEND_SAMPLE_RATE = 16000
 RECEIVE_SAMPLE_RATE = 24000
-CHUNK_SIZE = 2024
+CHUNK_SIZE = 8192 
 
 MODEL = "models/gemini-2.0-flash-exp"
 
@@ -41,8 +41,14 @@ client = genai.Client(http_options={"api_version": "v1alpha"})
 
 # While Gemini 2.0 Flash is in experimental preview mode, only one of AUDIO or
 # TEXT may be passed here.
+# OSVER should be MACOS or WINDOWS or LINUX
+# ternary expression to set osver
+import platform
+OSVER = platform.system()
+if OSVER == "Darwin":
+    OSVER = "MACOS"
 CONFIG = {"generation_config": {"response_modalities": ["TEXT"]}}
-syspmessage="""You are a helpful assistant. Your responses will be parsed and executed directly. The platform is MACOS. Respond to all messages in the format:
+syspmessage=f"""You are a helpful assistant. Your responses will be parsed and executed directly. The platform is {OSVER}. Respond to all messages in the format:
 # TEXT TO BE SHOWN TO USER
 ```python
 code to execute
