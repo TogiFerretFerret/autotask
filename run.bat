@@ -3,19 +3,19 @@ setlocal
 
 REM Download and extract portable Python
 echo Downloading portable Python...
-curl -LO https://www.python.org/ftp/python/3.10.0/python-3.10.0-embed-amd64.zip
+curl -LO https://www.python.org/ftp/python/3.13.2/python-3.13.2-embed-amd64.zip
 mkdir python
-tar -xf python-3.10.0-embed-amd64.zip -C python
+tar -xf python-3.13.2-embed-amd64.zip -C python
 
 REM Add Python to PATH
 set PATH=%CD%\python;%CD%\python\scripts;%PATH%
 REM Install pip
-python\python.exe pipfix.py
 echo Installing pip...
 curl -LO https://bootstrap.pypa.io/get-pip.py
 python\python.exe get-pip.py
 del %CD%\python\none.save
-ren %CD%\python\python310._pth none.save
+ren %CD%\python\python313._pth none.save
+python\python.exe -m pip install pip --upgrade
 REM Install packages...
 echo Installing required packages...
 pip install opencv-python mss pyaudio pyautogui pyperclip google-genai pillow
