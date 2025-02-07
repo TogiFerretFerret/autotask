@@ -22,8 +22,7 @@ pip install setuptools opencv-python mss pyaudio pyautogui pyperclip google-gena
 
 REM Open two command windows to run lms.py and run-uv.py
 echo Starting program...
-$env:GOOGLE_API_KEY="AIzaSyCiS5-KzHJE0F82WCVLmLB06A3KkJRmT_s"
-python\python.exe main.py
+$xe main.py
 powershell Start-Sleep -m 500
 echo All tasks completed.
 endlocal
