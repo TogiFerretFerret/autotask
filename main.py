@@ -10,40 +10,28 @@ import pyaudio
 import PIL.Image
 import mss
 import time
-import ast
-def is_valid_python(code):
-   try:
-       ast.parse(code)
-   except SyntaxError:
-       return False
-   return True
 import argparse
-
+import platform
+from code_check import is_valid_python
+#######
 from google import genai
 
 if sys.version_info < (3, 11, 0):
     import taskgroup, exceptiongroup
-
     asyncio.TaskGroup = taskgroup.TaskGroup
     asyncio.ExceptionGroup = exceptiongroup.ExceptionGroup
-
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 SEND_SAMPLE_RATE = 16000
 RECEIVE_SAMPLE_RATE = 24000
 CHUNK_SIZE = 8192 
-
 MODEL = "models/gemini-2.0-flash-exp"
-
-DEFAULT_MODE = "screen"
-
+DEFAULT_MODE = "screen" # literally the point of this is this bit
+fps = 6 # hey, that's the same framerate as discord is gonna allow soon! (for legal reasons this is a joke)
 client = genai.Client(http_options={"api_version": "v1alpha"})
-
 # While Gemini 2.0 Flash is in experimental preview mode, only one of AUDIO or
 # TEXT may be passed here.
 # OSVER should be MACOS or WINDOWS or LINUX
-# ternary expression to set osver
-import platform
 OSVER = platform.system()
 if OSVER == "Darwin":
     OSVER = "MACOS"
@@ -88,46 +76,6 @@ class AudioLoop:
                 break
             await self.session.send(input=text or ".", end_of_turn=True)
 
-    def _get_frame(self, cap):
-        # Read the frameq
-        ret, frame = cap.read()
-        # Check if the frame was read successfully
-        if not ret:
-            return None
-        # Fix: Convert BGR to RGB color space
-        # OpenCV captures in BGR but PIL expects RGB format
-        # This prevents the blue tint in the video feed
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        img = PIL.Image.fromarray(frame_rgb)  # Now using RGB frame
-        #img.thumbnail([1024, 1024])
-
-        image_io = io.BytesIO()
-        img.save(image_io, format="jpeg")
-        image_io.seek(0)
-
-        mime_type = "image/jpeg"
-        image_bytes = image_io.read()
-        return {"mime_type": mime_type, "data": base64.b64encode(image_bytes).decode()}
-
-    async def get_frames(self):
-        # This takes about a second, and will block the whole program
-        # causing the audio pipeline to overflow if you don't to_thread it.
-        cap = await asyncio.to_thread(
-            cv2.VideoCapture, 0
-        )  # 0 represents the default camera
-
-        while True:
-            frame = await asyncio.to_thread(self._get_frame, cap)
-            if frame is None:
-                break
-
-            await asyncio.sleep(1.0)
-
-            await self.out_queue.put(frame)
-
-        # Release the VideoCapture object
-        cap.release()
-
     def _get_screen(self):
         sct = mss.mss()
         monitor = sct.monitors[0]
@@ -152,16 +100,14 @@ class AudioLoop:
             if frame is None:
                 break
 
-            await asyncio.sleep(1.0)
-
+            await asyncio.sleep(1/fps)
             await self.out_queue.put(frame)
-
     async def send_realtime(self):
         while True:
             msg = await self.out_queue.get()
             await self.session.send(input=msg)
-
     async def listen_audio(self):
+        # Configurable - just make data in the dictionary data
         mic_info = pya.get_default_input_device_info()
         self.audio_stream = await asyncio.to_thread(
             pya.open,
@@ -179,7 +125,6 @@ class AudioLoop:
         while True:
             data = await asyncio.to_thread(self.audio_stream.read, CHUNK_SIZE, **kwargs)
             await self.out_queue.put({"data": "", "mime_type": "audio/pcm"})
-
     async def receive_audio(self):
         "Background task to reads from the websocket and write pcm chunks to the output queue"
         while True:
@@ -203,9 +148,10 @@ class AudioLoop:
                 elif stopBool:
                     code+=line+"\n"
             with open("prog.py","wt") as f:
-                f.write(code)
+                f.write(code) # for debugging
             print(toPrint)
-            time.sleep(2)
+            time.sleep(2) # until mouse is better, this is a good pause to let
+            # the user prepare for the code execution
             if is_valid_python(code):
                 try:
                     exec(code)
@@ -267,6 +213,7 @@ class AudioLoop:
         #except ExceptionGroup as EG:
         #    self.audio_stream.close()
         #    traceback.print_exception(EG)
+        # Otherwise this can break on school pcs
 
 
 if __name__ == "__main__":
@@ -277,7 +224,7 @@ if __name__ == "__main__":
         default=DEFAULT_MODE,
         help="pixels to stream from",
         choices=["camera", "screen", "none"],
-    )
+    ) # i mean i guess but then why would you use this
     args = parser.parse_args()
     main = AudioLoop(video_mode=args.mode)
     asyncio.run(main.run())
