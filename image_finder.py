@@ -84,7 +84,7 @@ def process_box(box_line, img, text_embedding):
     # Draw rectangle on original image (convert y coordinates accordingly)
     cv2.rectangle(img, (x, height - y), (w, height - h), (0, 255, 0), 1)
     return (score,roi, floor(x/2), floor((height-y)/2), floor(w/2), floor((height - h)/2))
-def click(query):
+def get_described_image_coords(query):
     start = time.time()
     text_embedding = get_text_embedding(query)
     print(f"Text embedding obtained in {time.time() - start} seconds.")
@@ -93,6 +93,7 @@ def click(query):
     # Grab screenshot using PIL's ImageGrab and convert to cv2 format
     screenshot = ImageGrab.grab()
     img = cv2.cvtColor(np.array(screenshot.convert('RGB')), cv2.COLOR_RGB2BGR)
+    img2=img
     
     # Get bounding boxes using pytesseract
     box = pytesseract.image_to_boxes(img)
@@ -104,9 +105,9 @@ def click(query):
         boxes=box2
     for b in tqdm(boxes.splitlines()):
         b = b.split(' ')
-        img = cv2.rectangle(img, (int(b[1]), img.shape[0] - int(b[2])), (int(b[3]), img.shape[0] - int(b[4])), (0, 255, 0), 1)
+        img2 = cv2.rectangle(img2, (int(b[1]), img.shape[0] - int(b[2])), (int(b[3]), img.shape[0] - int(b[4])), (0, 255, 0), 1)
     print(f"Bounding boxes obtained in {time.time() - start} seconds.")
-    cv2.imwrite('bb.png', img)
+    cv2.imwrite('bb.png', img2)
     # Process each bounding box concurrently using ThreadPoolExecutor
     scores = []
     count = 0
@@ -126,11 +127,10 @@ def click(query):
                     pbar.update(1)
                     score = future.result()[0]
                     scores.append(score)
-                    if score>0.26:
-                        if score>max_score:
-                            max_score=score
-                            max_score_img=future.result()[1]
-                            max_score_box=future.result()[2:]
+                    if score>max_score:
+                        max_score=score
+                        max_score_img=future.result()[1]
+                        max_score_box=future.result()[2:]
                 except Exception as e:
                     pass
     tx=(max_score_box[0]+max_score_box[2])/2
