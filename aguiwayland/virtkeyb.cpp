@@ -5,18 +5,26 @@
 #include <libevdev/libevdev-uinput.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <grp.h>
+#include <iostream>
+#include <string>
+#include <unistd.h>
+#include <fcntl.h>
+
 typedef struct libevdev_uinput *uinput;
+
 typedef struct
 {
     int evdev;
     char ascii;
     int shift;
 } keyMapEntry;
-typedef enum 
+
+typedef enum
 {
     LEFT = 0,
-    RIGHT = 1,
-    MIDDLE = 2
+    RIGHT = 2,
+    MIDDLE = 1
 } MouseButton;
 keyMapEntry keyMap[] = {
     {KEY_A, 'a', 0},
@@ -116,7 +124,7 @@ keyMapEntry keyMap[] = {
     {KEY_SLASH, '?', 1}};
 keyMapEntry convToEvdev(char c)
 {
-    for (int i = 0; i < sizeof(keyMap) / sizeof(keyMapEntry); i++)
+    for (int i = 0; i < (int)(sizeof(keyMap) / sizeof(keyMapEntry)); i++)
     {
         if (keyMap[i].ascii == c)
         {
@@ -164,37 +172,38 @@ void virt_mouse_move(int x, int y, uinput dev)
     libevdev_uinput_write_event(dev, EV_REL, REL_Y, y);
     libevdev_uinput_write_event(dev, EV_SYN, SYN_REPORT, 0);
 }
-void virt_mouse_scroll(int s,uinput dev){
+void virt_mouse_scroll(int s, uinput dev)
+{
     libevdev_uinput_write_event(dev, EV_REL, REL_WHEEL, s);
     libevdev_uinput_write_event(dev, EV_SYN, SYN_REPORT, 0);
 }
-void virt_mouse_click(MouseButton m,uinput dev){
+void virt_mouse_click(MouseButton m, uinput dev)
+{
     int convButton;
-    switch (m){
-        case LEFT:
-            convButton = BTN_LEFT;
-            break;
-        case RIGHT:
-            convButton = BTN_RIGHT;
-            break;
-        case MIDDLE:
-            convButton = BTN_MIDDLE;
-            break;
+    switch (m)
+    {
+    case LEFT:
+        convButton = BTN_LEFT;
+        break;
+    case RIGHT:
+        convButton = BTN_RIGHT;
+        break;
+    case MIDDLE:
+        convButton = BTN_MIDDLE;
+        break;
+    default:
+        convButton = BTN_LEFT;
+        break;
     }
     libevdev_uinput_write_event(dev, EV_KEY, convButton, 1);
     libevdev_uinput_write_event(dev, EV_SYN, SYN_REPORT, 0);
     libevdev_uinput_write_event(dev, EV_KEY, convButton, 0);
     libevdev_uinput_write_event(dev, EV_SYN, SYN_REPORT, 0);
 }
-void virt_destroy(uinput kbd)
-{
-    libevdev_uinput_destroy(kbd);
-}
-uinput virt_create(char *currk)
+uinput virt_create()
 {
     struct libevdev *dev;
     uinput virtkbd_dev;
-    const char *virtkbd_path;
     dev = libevdev_new();
     libevdev_set_name(dev, "Virtual Keyboard");
     libevdev_enable_property(dev, INPUT_PROP_DIRECT);
@@ -215,7 +224,7 @@ uinput virt_create(char *currk)
     libevdev_enable_event_type(dev, EV_SYN);
     libevdev_enable_event_type(dev, EV_REP);
     libevdev_enable_event_type(dev, EV_REL);
-    for (int i = 0; i < sizeof(keyMap) / sizeof(keyMapEntry); i++)
+    for (int i = 0; i < (int)(sizeof(keyMap) / sizeof(keyMapEntry)); i++)
     {
         libevdev_enable_event_code(dev, EV_KEY, keyMap[i].evdev, NULL);
     }
@@ -227,9 +236,54 @@ uinput virt_create(char *currk)
     libevdev_enable_event_code(dev, EV_KEY, KEY_RIGHTALT, NULL);
     libevdev_enable_event_code(dev, EV_KEY, BTN_TOOL_PEN, NULL);
     libevdev_uinput_create_from_device(dev, LIBEVDEV_UINPUT_OPEN_MANAGED, &virtkbd_dev);
-    virtkbd_path = libevdev_uinput_get_devnode(virtkbd_dev);
     libevdev_free(dev);
     sleep(1);
     return virtkbd_dev;
 }
-
+void virt_destroy(uinput kbd)
+{
+    libevdev_uinput_destroy(kbd);
+}
+class VirtInput
+{
+    uinput dev;
+public:
+    VirtInput()
+    {
+        /*auto grp = getgrnam("input");
+        if (grp == nullptr)
+        {
+            std::cerr << "getgrnam(\"input\") failed" << std::endl;
+        }
+        if (setgid(grp->gr_gid) < 0)
+        {
+            std::cerr << "couldn't change group to input!" << std::endl;
+        }*/
+        dev = virt_create();
+    };
+    void click(int m)
+    {
+        virt_mouse_click((MouseButton)m, dev);
+    };
+    void move(int x, int y)
+    {
+        virt_mouse_move(x, y, dev);
+    };
+    void scroll(int s)
+    {
+        virt_mouse_scroll(s, dev);
+    };
+    void type(char *str)
+    {
+        virt_type(str, dev);
+    };
+    void press(int code)
+    {
+        virt_press(code, dev);
+    };
+    ~VirtInput()
+    {
+        virt_destroy(dev);
+        
+    };
+};
