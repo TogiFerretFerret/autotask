@@ -12,7 +12,7 @@ import mss
 import time
 import argparse
 import platform
-from rclick import get_object_coords 
+from image_finder import *
 from code_check import is_valid_python
 #######
 from google import genai
