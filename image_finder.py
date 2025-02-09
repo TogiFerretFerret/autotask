@@ -84,7 +84,7 @@ def process_box(box_line, img, text_embedding):
     # Draw rectangle on original image (convert y coordinates accordingly)
     cv2.rectangle(img, (x, height - y), (w, height - h), (0, 255, 0), 1)
     return (score,roi, floor(x/2), floor((height-y)/2), floor(w/2), floor((height - h)/2))
-def get_object_coords(query):
+def get_described_image_coords(query):
     start = time.time()
     text_embedding = get_text_embedding(query)
     print(f"Text embedding obtained in {time.time() - start} seconds.")
