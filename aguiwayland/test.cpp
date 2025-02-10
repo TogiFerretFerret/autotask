@@ -8,7 +8,7 @@ int main(int argc, char **argv)
     virt_mouse_moveabs(500, 50, virtkbd_dev);
     virt_mouse_click(LEFT, virtkbd_dev);
     virt_mouse_scroll(1, virtkbd_dev);
-    virt_destroy(virtkbd_dev);
     sleep(10);
+    virt_destroy(virtkbd_dev);
     return 0;
 }

@@ -10,7 +10,9 @@
 #include <string>
 #include <unistd.h>
 #include <fcntl.h>
+#include <memory>
 #include <climits>
+#include <vector>
 typedef struct libevdev_uinput *uinput;
 typedef struct libevdev *evdev;
 typedef struct
@@ -258,10 +260,79 @@ void virt_destroy(uinput kbd)
 {
     libevdev_uinput_destroy(kbd);
 }
+
+position process_events(struct libevdev *dev)
+{
+
+    struct input_event ev = {};
+    int status = 0;
+    auto is_error = [](int v)
+    { return v < 0 && v != -EAGAIN; };
+    auto has_next_event = [](int v)
+    { return v >= 0; };
+    const auto flags = LIBEVDEV_READ_FLAG_NORMAL | LIBEVDEV_READ_FLAG_BLOCKING;
+    position p;
+    while (status = libevdev_next_event(dev, flags, &ev), !is_error(status))
+    {
+        if (!has_next_event(status))
+            continue;
+
+        if (ev.type == EV_REL)
+        {
+            if (ev.code == REL_X)
+            {
+                p.x += p.x-ev.value;
+            }
+            if (ev.code == REL_Y)
+            {
+                p.y += p.y-ev.value;
+            }
+        }
+    }
+    return p;
+}
+std::vector<evdev> virt_getMice()
+{
+    evdev dev = nullptr;
+    std::vector<evdev> marray;
+    position pos;
+    for (int i = 0;; i++)
+    {
+        std::string path = "/dev/input/event" + std::to_string(i);
+        int fd = open(path.c_str(), O_RDWR | O_CLOEXEC);
+        if (fd == -1)
+        {
+            break; // no more character devices
+        }
+        if (libevdev_new_from_fd(fd, &dev) == 0)
+        {
+            bool mouseLike = libevdev_has_event_type(dev, EV_REL) || libevdev_has_event_type(dev, EV_ABS);
+            if (mouseLike)
+            {
+                marray.push_back(dev);
+            }
+            else
+            {
+                libevdev_free(dev);
+            }
+            dev = nullptr;
+        }
+        close(fd);
+    }
+    return marray;
+}
+void virtUpdateMouse(position* op,std::vector<evdev> mice){
+    for(int i=0;i<mice.size();i++){
+        position np=process_events(mice[i]);
+        op->x+=np.x-op->y;
+        op->y+=np.y-op->y;
+    }
+}
 class VirtInput
 {
     uinput dev;
     position mousepos;
+    std::vector<evdev> mice;
     bool tracking = false;
 
 public:
@@ -298,85 +369,26 @@ public:
         this->moveAbs(0, 0);
         mousepos={0,0};
         tracking = true;
+        mice=virt_getMice();
     };
     void stopMouseTracking()
     {
         tracking = false;
+        for(int i=0;i<mice.size();i++){
+            libevdev_free(mice[i]);
+        }
     };
     position getMousePos()
     {
-        position p;
         if (tracking)
         {
-            p = virt_updateMice();
-            mousepos.x += p.x;
-            mousepos.y += p.y;
+            virtUpdateMouse(&mousepos,mice);
         };
         return mousepos;
     };
     ~VirtInput()
     {
         virt_destroy(dev);
+        if(tracking)stopMouseTracking();
     };
 };
-position process_events(struct libevdev *dev)
-{
-
-    struct input_event ev = {};
-    int status = 0;
-    auto is_error = [](int v)
-    { return v < 0 && v != -EAGAIN; };
-    auto has_next_event = [](int v)
-    { return v >= 0; };
-    const auto flags = LIBEVDEV_READ_FLAG_NORMAL | LIBEVDEV_READ_FLAG_BLOCKING;
-    position p;
-    while (status = libevdev_next_event(dev, flags, &ev), !is_error(status))
-    {
-        if (!has_next_event(status))
-            continue;
-
-        if (ev.type == EV_REL)
-        {
-            if (ev.code == REL_X)
-            {
-                p.x += ev.value;
-            }
-            if (ev.code == REL_Y)
-            {
-                p.y += ev.value;
-            }
-        }
-    }
-    return p;
-}
-position virt_updateMice()
-{
-    evdev dev = nullptr;
-    position pos;
-    for (int i = 0;; i++)
-    {
-        std::string path = "/dev/input/event" + std::to_string(i);
-        int fd = open(path.c_str(), O_RDWR | O_CLOEXEC);
-        if (fd == -1)
-        {
-            break; // no more character devices
-        }
-        if (libevdev_new_from_fd(fd, &dev) == 0)
-        {
-            bool mouseLike = libevdev_has_event_type(dev, EV_REL) | libevdev_has_event_type(dev, EV_ABS);
-            if (mouseLike)
-            {
-                position dpos = process_events(dev);
-                pos.x += dpos.x;
-                pos.y += dpos.y;
-            }
-            else
-            {
-                libevdev_free(dev);
-            }
-            dev = nullptr;
-        }
-        close(fd);
-    }
-    return pos;
-}
