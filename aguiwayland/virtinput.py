@@ -1,4 +1,5 @@
 import libvirtinput
+import libvirtinput
 class VirtInput:
     def __init__(self):
         self.virtinput = libvirtinput.VirtInput()
@@ -10,9 +11,7 @@ class VirtInput:
         self.virtinput.move(x, y)
     def scroll(self, s):
         self.virtinput.scroll(s)
-    def getMousePos(self):
-        sessionType=os.environ.get('XDG_SESSION_TYPE')
-        if sessionType=="wayland":
+    
             
-        else if sessionType=="x11":
+    
             

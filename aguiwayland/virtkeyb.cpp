@@ -10,16 +10,20 @@
 #include <string>
 #include <unistd.h>
 #include <fcntl.h>
-
+#include <climits>
 typedef struct libevdev_uinput *uinput;
-
+typedef struct libevdev *evdev;
 typedef struct
 {
     int evdev;
     char ascii;
     int shift;
 } keyMapEntry;
-
+typedef struct
+{
+    int x;
+    int y;
+} position;
 typedef enum
 {
     LEFT = 0,
@@ -172,6 +176,16 @@ void virt_mouse_move(int x, int y, uinput dev)
     libevdev_uinput_write_event(dev, EV_REL, REL_Y, y);
     libevdev_uinput_write_event(dev, EV_SYN, SYN_REPORT, 0);
 }
+void virt_mouse_moveabs(int x, int y, uinput dev)
+{
+    libevdev_uinput_write_event(dev, EV_REL, REL_X, INT_MIN);
+    libevdev_uinput_write_event(dev, EV_REL, REL_Y, INT_MIN);
+    libevdev_uinput_write_event(dev, EV_SYN, SYN_REPORT, 0);
+    libevdev_uinput_write_event(dev, EV_REL, REL_X, x);
+    libevdev_uinput_write_event(dev, EV_SYN, SYN_REPORT, 0);
+    libevdev_uinput_write_event(dev, EV_REL, REL_Y, y);
+    libevdev_uinput_write_event(dev, EV_SYN, SYN_REPORT, 0);
+}
 void virt_mouse_scroll(int s, uinput dev)
 {
     libevdev_uinput_write_event(dev, EV_REL, REL_WHEEL, s);
@@ -247,27 +261,25 @@ void virt_destroy(uinput kbd)
 class VirtInput
 {
     uinput dev;
+    position mousepos;
+    bool tracking = false;
+
 public:
     VirtInput()
     {
-        /*auto grp = getgrnam("input");
-        if (grp == nullptr)
-        {
-            std::cerr << "getgrnam(\"input\") failed" << std::endl;
-        }
-        if (setgid(grp->gr_gid) < 0)
-        {
-            std::cerr << "couldn't change group to input!" << std::endl;
-        }*/
         dev = virt_create();
     };
     void click(int m)
     {
         virt_mouse_click((MouseButton)m, dev);
     };
-    void move(int x, int y)
+    void moveRel(int x, int y)
     {
         virt_mouse_move(x, y, dev);
+    };
+    void moveAbs(int x, int y)
+    {
+        virt_mouse_moveabs(x, y, dev);
     };
     void scroll(int s)
     {
@@ -281,9 +293,90 @@ public:
     {
         virt_press(code, dev);
     };
+    void startMouseTracking()
+    {
+        this->moveAbs(0, 0);
+        mousepos={0,0};
+        tracking = true;
+    };
+    void stopMouseTracking()
+    {
+        tracking = false;
+    };
+    position getMousePos()
+    {
+        position p;
+        if (tracking)
+        {
+            p = virt_updateMice();
+            mousepos.x += p.x;
+            mousepos.y += p.y;
+        };
+        return mousepos;
+    };
     ~VirtInput()
     {
         virt_destroy(dev);
-        
     };
 };
+position process_events(struct libevdev *dev)
+{
+
+    struct input_event ev = {};
+    int status = 0;
+    auto is_error = [](int v)
+    { return v < 0 && v != -EAGAIN; };
+    auto has_next_event = [](int v)
+    { return v >= 0; };
+    const auto flags = LIBEVDEV_READ_FLAG_NORMAL | LIBEVDEV_READ_FLAG_BLOCKING;
+    position p;
+    while (status = libevdev_next_event(dev, flags, &ev), !is_error(status))
+    {
+        if (!has_next_event(status))
+            continue;
+
+        if (ev.type == EV_REL)
+        {
+            if (ev.code == REL_X)
+            {
+                p.x += ev.value;
+            }
+            if (ev.code == REL_Y)
+            {
+                p.y += ev.value;
+            }
+        }
+    }
+    return p;
+}
+position virt_updateMice()
+{
+    evdev dev = nullptr;
+    position pos;
+    for (int i = 0;; i++)
+    {
+        std::string path = "/dev/input/event" + std::to_string(i);
+        int fd = open(path.c_str(), O_RDWR | O_CLOEXEC);
+        if (fd == -1)
+        {
+            break; // no more character devices
+        }
+        if (libevdev_new_from_fd(fd, &dev) == 0)
+        {
+            bool mouseLike = libevdev_has_event_type(dev, EV_REL) | libevdev_has_event_type(dev, EV_ABS);
+            if (mouseLike)
+            {
+                position dpos = process_events(dev);
+                pos.x += dpos.x;
+                pos.y += dpos.y;
+            }
+            else
+            {
+                libevdev_free(dev);
+            }
+            dev = nullptr;
+        }
+        close(fd);
+    }
+    return pos;
+}
