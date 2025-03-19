@@ -102,3 +102,46 @@ uv search <package_name>
 
 For more information and advanced usage, refer to the official documentation:
 [UV Python Package Manager Documentation](https://example.com/uv-docs)
+
+## Running Tests
+
+### Running Tests Locally
+
+To run the tests locally using `pytest`, follow these steps:
+
+1. Install the required dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Run the tests:
+   ```bash
+   pytest tests
+   ```
+
+### Running Tests in Codespaces
+
+To run the tests in Codespaces, follow these steps:
+
+1. Open the repository in Codespaces.
+
+2. Open a terminal in Codespaces.
+
+3. Run the tests:
+   ```bash
+   pytest tests
+   ```
+
+### Running Tests using Docker
+
+To run the tests using Docker, follow these steps:
+
+1. Build the Docker image:
+   ```bash
+   docker build -t ai-assistant-gemini .
+   ```
+
+2. Run the tests:
+   ```bash
+   docker run --rm ai-assistant-gemini
+   ```
