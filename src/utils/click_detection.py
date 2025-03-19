@@ -12,9 +12,8 @@ import mss
 import time
 import argparse
 import platform
-from image_finder import *
-from code_check import is_valid_python
-#######
+from utils.image_finder import *
+from utils.code_check import is_valid_python
 from google import genai
 
 if sys.version_info < (3, 11, 0):
@@ -232,5 +231,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     main = AudioLoop(video_mode=args.mode)
     asyncio.run(main.run())
-
-

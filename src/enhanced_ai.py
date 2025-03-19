@@ -12,7 +12,9 @@ import mss
 import time
 import argparse
 import platform
-from code_check import is_valid_python
+from utils.code_check import is_valid_python
+from utils.image_finder import get_described_image_coords
+from utils.text_finder import find_text_coordinates
 from langchain import OpenAI, LLMChain
 from gpt4free import you
 import stockfish
@@ -52,7 +54,9 @@ Use your visual abilities to complete a task. Don't assume anything about the us
 DO NOT USE PYAUTOGUI IMAGE SEARCH EVER. THAT VIOLATES THE RULE AGAINST ASSUMING ABOUT THE USER'S FILESYSTEM. USE YOUR VISION/CODE TO GET MOUSE POSITIONS.
 Do not assume a task must continue. If a task is not followed up on, wait for the next instruction. 
 IMPORTANTLY, MAKE SURE YOUR CODE IS COMPLETE. DISFUNCTIONAL CODE IS BETTER THAN INCOMPLETE CODE. DO NOT COMMENT YOUR CODE OR PRINT A MESSAGE TO THE USER YOU STATED IN A LINE THAT STARTS WITH A HASHTAG.
-NOT EVERY PROMPT REQUIRES A CODE RESPONSE.
+NOT EVERY PROMPT REQUIRES A CODE RESPONSE. IN ADDITION, THERE IS A PRIVATE LIBRARY image_finder, WITH A FUNCTION get_described_image_coords(target_image_description).
+IT TAKES A STRING AS AN ARGUMENT AND RETURNS THE PYAUTOGUI COORDS AS A TUPLE OF INTEGERS. THE STRING IS THE TEXT REPRESENTING WHAT OBJECT YOU WANT TO FIND (eg. Google Chrome App Icon in order to get the coordinates for the Google Chrome app icon.). REALIZE THAT TO OPEN GOOGLE CHROME, FOR EXAMPLE, REQUIRES CLICKING ON THE GOOGLE CHROME APP ICON.
+THERE IS ALSO A PRIVATE LIBRARY text_finder WHICH YOU HAVE TO IMPORT WHICH EXPOSES THE FUNCTION find_text_coordinates(target_text) WHICH TAKES A STRING AS AN ARGUMENT AND RETURNS THE PYAUTOGUI COORDS AS A TUPLE OF INTEGERS. THE STRING IS THE TEXT REPRESENTING WHAT OBJECT YOU WANT TO FIND (eg. "Compose" in order to get the coordinates for the piece of text "Compose").
 """
 systemPrompt=f"SYSTEM INSTRUCTIONS (DO NOT RESPOND TO THIS): {syspmessage}"
 pya = pyaudio.PyAudio()
