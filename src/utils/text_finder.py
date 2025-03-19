@@ -3,6 +3,8 @@ import pytesseract
 import numpy as np
 import math
 from PIL import Image, ImageGrab
+import platform
+
 def fortege(cv2_image, target_text, cluster_distance_thresh=50):
     """
     Finds the center coordinates (in pyautogui coordinate space) of the specified target text within a cv2 image.
@@ -116,3 +118,6 @@ def find_text_coordinates(target_text):
     img = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
     coords = fortege(img, target_text)
     return coords
+
+def is_macos():
+    return platform.system() == "Darwin"

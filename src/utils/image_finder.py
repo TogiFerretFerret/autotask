@@ -12,6 +12,7 @@ import torch
 import os
 from tqdm import tqdm, trange
 import torch._logging as logging
+import platform
 
 logging.set_logs(all=0)
 print(f"Imports took {time.time() - start} seconds.")  # Dummy timing print
@@ -139,3 +140,5 @@ def get_described_image_coords(query):
     ty=floor(ty)
     return (tx,ty)
 
+def is_macos():
+    return platform.system() == "Darwin"
