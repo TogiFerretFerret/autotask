@@ -5,6 +5,7 @@ from aguiwayland.virtinput import VirtInput
 @pytest.fixture
 def virtinput():
     with patch('aguiwayland.virtinput.libvirtinput') as mock_libvirtinput:
+        mock_libvirtinput.VirtInput = MagicMock()
         yield VirtInput()
 
 def test_type(virtinput):
