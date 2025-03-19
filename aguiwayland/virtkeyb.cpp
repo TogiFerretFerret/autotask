@@ -13,25 +13,31 @@
 #include <memory>
 #include <climits>
 #include <vector>
-typedef struct libevdev_uinput *uinput;
-typedef struct libevdev *evdev;
+
+// Key mapping structure
 typedef struct
 {
     int evdev;
     char ascii;
     int shift;
 } keyMapEntry;
+
+// Position structure
 typedef struct
 {
     int x;
     int y;
 } position;
+
+// Mouse button enumeration
 typedef enum
 {
     LEFT = 0,
     RIGHT = 2,
     MIDDLE = 1
 } MouseButton;
+
+// Key mapping array
 keyMapEntry keyMap[] = {
     {KEY_A, 'a', 0},
     {KEY_B, 'b', 0},
@@ -128,6 +134,8 @@ keyMapEntry keyMap[] = {
     {KEY_COMMA, '<', 1},
     {KEY_DOT, '>', 1},
     {KEY_SLASH, '?', 1}};
+
+// Convert ASCII character to evdev key code
 keyMapEntry convToEvdev(char c)
 {
     for (int i = 0; i < (int)(sizeof(keyMap) / sizeof(keyMapEntry)); i++)
@@ -140,6 +148,8 @@ keyMapEntry convToEvdev(char c)
     keyMapEntry invalidEntry = {-1, '\0', 0};
     return invalidEntry;
 }
+
+// Simulate key press
 void virt_press(int code, uinput dev)
 {
     libevdev_uinput_write_event(dev, EV_SYN, SYN_REPORT, 0);
@@ -149,6 +159,8 @@ void virt_press(int code, uinput dev)
     libevdev_uinput_write_event(dev, EV_KEY, code, 0);
     libevdev_uinput_write_event(dev, EV_SYN, SYN_REPORT, 0);
 }
+
+// Simulate typing a string
 void virt_type(char *str, uinput dev)
 {
     for (int i = 0; *(str + i) != 0; i++)
@@ -171,6 +183,8 @@ void virt_type(char *str, uinput dev)
         }
     }
 }
+
+// Simulate relative mouse movement
 void virt_mouse_move(int x, int y, uinput dev)
 {
     libevdev_uinput_write_event(dev, EV_KEY, BTN_TOOL_PEN, 0);
@@ -178,6 +192,8 @@ void virt_mouse_move(int x, int y, uinput dev)
     libevdev_uinput_write_event(dev, EV_REL, REL_Y, y);
     libevdev_uinput_write_event(dev, EV_SYN, SYN_REPORT, 0);
 }
+
+// Simulate absolute mouse movement
 void virt_mouse_moveabs(int x, int y, uinput dev)
 {
     libevdev_uinput_write_event(dev, EV_REL, REL_X, INT_MIN);
@@ -188,11 +204,15 @@ void virt_mouse_moveabs(int x, int y, uinput dev)
     libevdev_uinput_write_event(dev, EV_REL, REL_Y, y);
     libevdev_uinput_write_event(dev, EV_SYN, SYN_REPORT, 0);
 }
+
+// Simulate mouse scroll
 void virt_mouse_scroll(int s, uinput dev)
 {
     libevdev_uinput_write_event(dev, EV_REL, REL_WHEEL, s);
     libevdev_uinput_write_event(dev, EV_SYN, SYN_REPORT, 0);
 }
+
+// Simulate mouse click
 void virt_mouse_click(MouseButton m, uinput dev)
 {
     int convButton;
@@ -216,6 +236,8 @@ void virt_mouse_click(MouseButton m, uinput dev)
     libevdev_uinput_write_event(dev, EV_KEY, convButton, 0);
     libevdev_uinput_write_event(dev, EV_SYN, SYN_REPORT, 0);
 }
+
+// Create virtual input device
 uinput virt_create()
 {
     struct libevdev *dev;
@@ -256,14 +278,16 @@ uinput virt_create()
     sleep(1);
     return virtkbd_dev;
 }
+
+// Destroy virtual input device
 void virt_destroy(uinput kbd)
 {
     libevdev_uinput_destroy(kbd);
 }
 
+// Process input events
 position process_events(struct libevdev *dev)
 {
-
     struct input_event ev = {};
     int status = 0;
     auto is_error = [](int v)
@@ -281,16 +305,18 @@ position process_events(struct libevdev *dev)
         {
             if (ev.code == REL_X)
             {
-                p.x += p.x-ev.value;
+                p.x += p.x - ev.value;
             }
             if (ev.code == REL_Y)
             {
-                p.y += p.y-ev.value;
+                p.y += p.y - ev.value;
             }
         }
     }
     return p;
 }
+
+// Get list of mouse devices
 std::vector<evdev> virt_getMice()
 {
     evdev dev = nullptr;
@@ -321,13 +347,19 @@ std::vector<evdev> virt_getMice()
     }
     return marray;
 }
-void virtUpdateMouse(position* op,std::vector<evdev> mice){
-    for(int i=0;i<mice.size();i++){
-        position np=process_events(mice[i]);
-        op->x+=np.x-op->y;
-        op->y+=np.y-op->y;
+
+// Update mouse position
+void virtUpdateMouse(position *op, std::vector<evdev> mice)
+{
+    for (int i = 0; i < mice.size(); i++)
+    {
+        position np = process_events(mice[i]);
+        op->x += np.x - op->y;
+        op->y += np.y - op->y;
     }
 }
+
+// Virtual input class
 class VirtInput
 {
     uinput dev;
@@ -367,14 +399,15 @@ public:
     void startMouseTracking()
     {
         this->moveAbs(0, 0);
-        mousepos={0,0};
+        mousepos = {0, 0};
         tracking = true;
-        mice=virt_getMice();
+        mice = virt_getMice();
     };
     void stopMouseTracking()
     {
         tracking = false;
-        for(int i=0;i<mice.size();i++){
+        for (int i = 0; i < mice.size(); i++)
+        {
             libevdev_free(mice[i]);
         }
     };
@@ -382,13 +415,14 @@ public:
     {
         if (tracking)
         {
-            virtUpdateMouse(&mousepos,mice);
+            virtUpdateMouse(&mousepos, mice);
         };
         return mousepos;
     };
     ~VirtInput()
     {
         virt_destroy(dev);
-        if(tracking)stopMouseTracking();
+        if (tracking)
+            stopMouseTracking();
     };
 };
