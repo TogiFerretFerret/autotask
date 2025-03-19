@@ -14,5 +14,10 @@
         ],
         "python.testing.pytestEnabled": true,
         "python.testing.unittestEnabled": false
+    },
+    "tasks": {
+      "build": "pip install -r requirements.txt",
+      "test": "pytest tests",
+      "launch": "cd src && python main.py --mode screen"
     }
 }
