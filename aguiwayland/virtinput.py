@@ -1,8 +1,16 @@
-import libvirtinput
+import os
+
+if os.environ.get('XDG_SESSION_TYPE') == 'wayland':
+    import libvirtinput
+else:
+    libvirtinput = None
 
 class VirtInput:
     def __init__(self):
-        self.virtinput = libvirtinput.VirtInput()
+        if libvirtinput:
+            self.virtinput = libvirtinput.VirtInput()
+        else:
+            self.virtinput = None
 
     def type(self, text):
         """
@@ -11,7 +19,8 @@ class VirtInput:
         Args:
             text (str): The text to type.
         """
-        self.virtinput.type(text)
+        if self.virtinput:
+            self.virtinput.type(text)
 
     def press(self, key):
         """
@@ -20,7 +29,8 @@ class VirtInput:
         Args:
             key (int): The key code to press.
         """
-        self.virtinput.press(key)
+        if self.virtinput:
+            self.virtinput.press(key)
 
     def moveRel(self, x, y):
         """
@@ -30,7 +40,8 @@ class VirtInput:
             x (int): The relative x-coordinate to move.
             y (int): The relative y-coordinate to move.
         """
-        self.virtinput.moveRel(x, y)
+        if self.virtinput:
+            self.virtinput.moveRel(x, y)
 
     def moveAbs(self, x, y):
         """
@@ -40,7 +51,8 @@ class VirtInput:
             x (int): The absolute x-coordinate to move.
             y (int): The absolute y-coordinate to move.
         """
-        self.virtinput.moveAbs(x, y)
+        if self.virtinput:
+            self.virtinput.moveAbs(x, y)
 
     def scroll(self, s):
         """
@@ -49,7 +61,8 @@ class VirtInput:
         Args:
             s (int): The scroll amount.
         """
-        self.virtinput.scroll(s)
+        if self.virtinput:
+            self.virtinput.scroll(s)
 
     def click(self, button):
         """
@@ -58,19 +71,22 @@ class VirtInput:
         Args:
             button (int): The mouse button to click.
         """
-        self.virtinput.click(button)
+        if self.virtinput:
+            self.virtinput.click(button)
 
     def startMouseTracking(self):
         """
         Start tracking mouse position.
         """
-        self.virtinput.startMouseTracking()
+        if self.virtinput:
+            self.virtinput.startMouseTracking()
 
     def stopMouseTracking(self):
         """
         Stop tracking mouse position.
         """
-        self.virtinput.stopMouseTracking()
+        if self.virtinput:
+            self.virtinput.stopMouseTracking()
 
     def getMousePos(self):
         """
@@ -79,4 +95,6 @@ class VirtInput:
         Returns:
             tuple: The current mouse position (x, y).
         """
-        return self.virtinput.getMousePos()
+        if self.virtinput:
+            return self.virtinput.getMousePos()
+        return (0, 0)
